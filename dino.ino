@@ -123,6 +123,8 @@ void setup() {
   pinMode(3 , OUTPUT);
   pinMode(4 , OUTPUT);
   pinMode(5 , OUTPUT);
+  pinMode(10,OUTPUT);
+  pinMode(9,OUTPUT);
 
   digitalWrite(3,HIGH);
   digitalWrite(4,HIGH);
@@ -148,6 +150,9 @@ void setup() {
   }
 
   attachInterrupt(digitalPinToInterrupt(2), onClick, RISING);
+  digitalWrite(10,HIGH);
+  delay(100);
+  digitalWrite(10,LOW);
 }
 
 void loop() {
@@ -224,6 +229,9 @@ void loop() {
   }
 
   if (isGameOver) {
+    digitalWrite(9,HIGH);
+    delay(10);
+    digitalWrite(9,LOW);
     lcd.print("GAME OVER!");
     for (int r=0;r<4;r++) {
       for (int c=0;c<20;c++) {
@@ -260,8 +268,8 @@ void yield() {
     else lastCreationDelay = random(4,8);
     creationDelay = (350-FUNC)*lastCreationDelay;
     tmr1 = millis();
-  }
-
+  } 
+ 
   for (int i=0;i<arrSize;i++) {
     if (susPos == 2 && arr[i]->getColumn() == 3 && millis()-tmr2 >= 350-FUNC) {
       digitalWrite(hearts+2,LOW);
