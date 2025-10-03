@@ -7,6 +7,8 @@
 #define SUSROAD 2
 #define CACROAD 3
 #define SUSJUMP 4
+#define FUNC pow(millis()/50,1/3)
+#define ARR 8
 
 
 volatile LiquidCrystal_I2C lcd(0x27,20,4);
@@ -27,10 +29,15 @@ volatile int arrSize = 0;
 volatile int creationDelay = 0;
 volatile bool isGameOver = false;
 volatile int hearts = 3;
+volatile int arrCounter = 0;
+volatile int cacCount = 0;
+volatile int lastCreationDelay = 0;
 
 volatile int susPos = 2;
 
-void removeCac(int pos);
+class Cactus;
+
+void removeCac(Cactus* cac);
 
 class Cactus {
 public:
@@ -49,6 +56,10 @@ public:
     }
   }
 
+  void setEnded(bool flag) {
+    this->isEnded = flag;
+  }
+
   int getColumn() {
     return this->column;
   }
@@ -58,6 +69,14 @@ public:
   }
 
   void moveLeft() {
+    if (isEnded) return;
+
+    if (this->column <= 0) {
+      this->setEnded(true);
+      cacCount--;
+      
+    }
+    
     lcd.setCursor(getColumn(), getRow());
     lcd.printByte(ROAD);
   
@@ -66,44 +85,30 @@ public:
     lcd.setCursor(getColumn(), getRow());
     lcd.printByte(CACROAD);
 
-    if (this->column == 0) {
-      removeCac(this->pos);
-      lcd.setCursor(0,2);
-      lcd.printByte(ROAD);
-    }
-  }
-
-  void setPos(int pos) {
-    this->pos = pos;
-  }
-
-  void decPos() {
-    this->pos = this->pos == 0 ? 0 : this->pos-1;
+    
   }
 private:
   int column;
   int row;
-  int pos;
+  bool isEnded = false;
 };
 
 
-volatile Cactus* arr[3];
+volatile Cactus* arr[ARR];
 
 void addCac(Cactus* cac) {
-  cac->setPos(arrSize);
-  arr[arrSize] = cac;
-  arrSize++;
+  delete arr[arrCounter];
+  arr[arrCounter] = cac;
+  if (arrCounter == ARR-1) {arrCounter = 0;}
+  else {arrCounter++;}
+  arrSize = min(++arrSize,ARR);
+  cacCount++;
 }
 
-void removeCac(int pos) {
-  for (int i=pos;i<2;i++) {
-    arr[i]=arr[i+1];
-    arr[i]->decPos();
-  }
-  arrSize--;
-
+void removeCac(Cactus* cac) {
+  cacCount--;
   lcd.setCursor(0,2);
-  lcd.printByte(1);
+  lcd.printByte(ROAD);
 }
 
 void onClick() {
@@ -124,7 +129,7 @@ void setup() {
   digitalWrite(5,HIGH);
   
   
-  lcd.init();                      // initialize the lcd 
+  lcd.init();
   lcd.init();
   lcd.createChar(ROAD, road);
   lcd.createChar(SUSROAD, sus_road);
@@ -143,10 +148,6 @@ void setup() {
   }
 
   attachInterrupt(digitalPinToInterrupt(2), onClick, RISING);
-  
-  //delay(2000);
-  Cactus* cac = new Cactus(12,2);
-  addCac(cac);
 }
 
 void loop() {
@@ -191,25 +192,27 @@ void loop() {
     isJumped = false;
   }
   
-  if (arrSize > 0 && millis()-tmr >= 300) {
+  if (arrSize > 0 && millis()-tmr >= 350-FUNC) {
     for (int i=0;i<arrSize;i++) {
       arr[i]->moveLeft();
+      lcd.setCursor(0,2);
+      lcd.printByte(ROAD);
     }
     tmr = millis();
   }
 
-  if (millis()-tmr1 >= creationDelay && arrSize < 3) {
+  if (millis()-tmr1 >= creationDelay && cacCount < ARR) {
     Cactus* cac = new Cactus(19, 2);
-    if (arrSize != 3) addCac(cac);
-    
-    
-    randomSeed(analogRead(A0));
-    creationDelay = random(1500,2500);
+    addCac(cac);
+    randomSeed(millis());
+    if (lastCreationDelay <= 5) lastCreationDelay = random(6,8);
+    else lastCreationDelay = random(4,8);
+    creationDelay = (350-FUNC)*lastCreationDelay;
     tmr1 = millis();
   }
 
   for (int i=0;i<arrSize;i++) {
-    if (susPos == 2 && arr[i]->getColumn() == 3 && millis()-tmr2 >= 300) {
+    if (susPos == 2 && arr[i]->getColumn() == 3 && millis()-tmr2 >= 350-FUNC) {
       digitalWrite(hearts+2,LOW);
       hearts--;
       tmr2 = millis();
@@ -240,36 +243,34 @@ void loop() {
 }
 
 void yield() {
-  if (arrSize > 0 && millis()-tmr >= 300) {
+  if (arrSize > 0 && millis()-tmr >= 350-FUNC) {
     for (int i=0;i<arrSize;i++) {
       arr[i]->moveLeft();
+      lcd.setCursor(0,2);
+      lcd.printByte(ROAD);
     }
     tmr = millis();
   }
 
-  if (millis()-tmr1 >= creationDelay && arrSize < 3) {
+  if (millis()-tmr1 >= creationDelay && cacCount < ARR) {
     Cactus* cac = new Cactus(19, 2);
-    if (arrSize != 3) addCac(cac);
-    
-    
-    randomSeed(analogRead(A0));
-    creationDelay = random(1500,2500);
+    addCac(cac);
+    randomSeed(millis());
+    if (lastCreationDelay <= 4) lastCreationDelay = random(6,8);
+    else lastCreationDelay = random(4,8);
+    creationDelay = (350-FUNC)*lastCreationDelay;
     tmr1 = millis();
   }
 
   for (int i=0;i<arrSize;i++) {
-    if (susPos == 2 && arr[i]->getColumn() == 3 && millis()-tmr2 >= 300) {
+    if (susPos == 2 && arr[i]->getColumn() == 3 && millis()-tmr2 >= 350-FUNC) {
       digitalWrite(hearts+2,LOW);
       hearts--;
       tmr2 = millis();
       if (hearts == 0) {
         isGameOver = true;
       }
-      lcd.setCursor(3,2);
-      lcd.printByte(SUSROAD);
       break;
     }
-  }
-
-                            
+  }                         
 }
