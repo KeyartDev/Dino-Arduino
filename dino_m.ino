@@ -34,6 +34,7 @@
 
 #define REP for(int x=0;x<2;x++) 
 
+void(* reset)(void) = 0;
 
 const long MINUTE = 60000000;
 const long double TAKT = (MINUTE/BPM)*4;
@@ -47,15 +48,11 @@ volatile bool isGameOver = true;
 #define FOUR_PAUSE delayMicroseconds(FOUR);
 
 void setup() {
-  pinMode(2, OUTPUT);
-  pinMode(3,INPUT_PULLUP);
-  pinMode(4,INPUT_PULLUP);
-  Serial.begin(9600);
-  attachInterrupt(digitalPinToInterrupt(3),onGameOver,RISING);
-  attachInterrupt(digitalPinToInterrupt(4),onStart,RISING);
+  pinMode(10, OUTPUT);
+  Serial.begin(115200);
 }
 
-void playTone(float v, long t, bool withPoint, int port=2) {
+void playTone(float v, long t, bool withPoint, int port=10) {
   if (!isGameOver) {
     t = withPoint ? t+t/2 : t;
     const long T = 1000000 / v;
@@ -78,8 +75,8 @@ void rest(long t) {
 }
 
 void onGameOver() {
-  isGameOver = true;
-
+  delay(500);
+  
   playTone(LAUP,FOUR,false);
   playTone(DOUP,FOUR,false);
   playTone(REUPS,FOUR,false);
@@ -87,6 +84,15 @@ void onGameOver() {
   playTone(DOUP,FOUR,false);
   playTone(LA,FOUR,false);
   playTone(LA,HALF,false);
+
+  isGameOver = true;
+}
+
+void onDamage() {
+  for (int i=0;i<10;i++) {
+    playTone(275,SIXTEEN/16,false);
+    playTone(225,SIXTEEN/16,false);
+  }
 }
 
 void onStart() {
@@ -98,17 +104,6 @@ void loop() {
 
   if (!isGameOver) {
     //1
-    rest(FOUR);
-    playTone(SI,FOUR,false);
-    playTone(SI,FOUR,false);
-    playTone(SI,EIGHT,false);
-    playTone(SI,EIGHT,false);
-  
-    playTone(SI,FOUR,false);
-    playTone(SIUP,FOUR,false);
-    playTone(SIUP,FOUR,false);
-    playTone(SIUP,FOUR,false);
-  
     playTone(LA,FOUR,false);
     playTone(FAUPS,FOUR,false);
     playTone(SIUP,HALF,false);
@@ -207,5 +202,37 @@ void loop() {
     playTone(FAUPS,FOUR,false);
   
     Serial.println("----------------------END----------------------");
+  
+    
   } 
+
+  while (Serial.available()) {
+    char n = Serial.read();
+    if (n == '1') {
+      isGameOver = false;
+    } else if (n == '0') {
+      onGameOver();
+    } else if (n == '2') {
+      onDamage();
+    } else if (n == '3') {
+      reset();
+    }
+    Serial.println(n);
+  }
+}
+
+void yield() {
+  while (Serial.available()) {
+    char n = Serial.read();
+    if (n == '1') {
+      isGameOver = false;
+    } else if (n == '0') {
+      onGameOver();
+    } else if (n == '2') {
+      onDamage();
+    } else if (n == '3') {
+      reset();
+    }
+    Serial.println(n);
+  }
 }
